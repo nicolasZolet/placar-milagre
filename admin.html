@@ -82,9 +82,10 @@
     <div class="card result" id="res">
       <h2 id="resTitle">Link pronto</h2>
       <div class="qr" id="qr"></div>
-      <div class="link" id="link"></div>
+      <div class="link" id="msg" style="white-space:pre-wrap;color:var(--txt);font-size:15px"></div>
       <div class="btns">
-        <button class="btn" id="copy">Copiar link</button>
+        <button class="btn" id="copyMsg" style="background:var(--blue);border-color:var(--blue);color:#000">Copiar mensagem</button>
+        <button class="btn" id="copy">Copiar só o link</button>
         <a class="btn wa" id="wa" target="_blank" rel="noopener">Enviar no WhatsApp</a>
       </div>
     </div>
@@ -192,15 +193,37 @@ $("go").onclick = async () => {
   $("go").disabled = false;
 };
 
+const hora = ms => { const x = brt(ms); return x.endsWith(":00") ? String(Number(x.slice(0, 2))) + "h" : x.replace(":", "h"); };
+function quando(ms) {
+  const hoje = brtDay(Date.now()), amanha = brtDay(Date.now() + 86400e3), d = brtDay(ms);
+  return d === hoje ? "hoje (" + d + ")" : d === amanha ? "amanhã (" + d + ")" : "dia " + d;
+}
+function mensagem(url, d) {
+  const longo = d.exp - d.ini > 3 * 86400e3;
+  const janela = longo
+    ? "✅ Válido até " + brtDay(d.exp) + "/" + new Date(d.exp).getUTCFullYear() + "."
+    : brtDay(d.ini) === brtDay(d.exp - 1)
+      ? "✅ Funciona " + quando(d.ini) + ", das " + hora(d.ini) + " às " + hora(d.exp) + "."
+      : "✅ Funciona de " + hora(d.ini) + " " + quando(d.ini) + " até " + hora(d.exp) + " " + quando(d.exp) + ".";
+  return "⚽ *Placar Milagre*\n" +
+    "Marque os gols do seu jogo no painel pelo link abaixo:\n\n" +
+    url + "\n\n" + janela + "\n" +
+    "Fora desse horário o link não altera o placar.";
+}
+async function copiar(txt, ok) {
+  try { await navigator.clipboard.writeText(txt); toast(ok); }
+  catch (e) { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); toast(ok); }
+}
 function show(t, d) {
   const url = linkFor(t, d);
+  const msg = mensagem(url, d);
   $("res").classList.add("on");
   $("resTitle").textContent = d.nome;
-  $("link").textContent = url;
+  $("msg").textContent = msg.replace(/\*/g, "");
   try { const qr = qrcode(0, "M"); qr.addData(url); qr.make(); $("qr").innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch (e) { $("qr").style.display = "none"; }
-  const msg = "⚽ Placar do campo (" + d.nome + ")\nVálido até " + fmt(d.exp) + ":\n" + url;
   $("wa").href = "https://wa.me/?text=" + encodeURIComponent(msg);
-  $("copy").onclick = async () => { try { await navigator.clipboard.writeText(url); toast("Link copiado"); } catch (e) { prompt("Copie o link:", url); } };
+  $("copyMsg").onclick = () => copiar(msg, "Mensagem copiada");
+  $("copy").onclick = () => copiar(url, "Link copiado");
   $("res").scrollIntoView({ behavior: "smooth" });
 }
 
