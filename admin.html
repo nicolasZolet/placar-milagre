@@ -50,6 +50,18 @@
   .err { color: var(--bad); font-weight: 700; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--txt); color: #000; padding: 10px 18px; border-radius: 99px; font-weight: 700; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .toast.on { opacity: 1; }
+  .day { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 17px; color: var(--mute); text-transform: uppercase; letter-spacing: 1.5px; margin: 14px 0 8px; }
+  .day:first-child { margin-top: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+  .slot { padding: 12px 6px; border-radius: 12px; border: 1px solid var(--line); background: #070b10; color: var(--txt); cursor: pointer; font-family: "Barlow Condensed", sans-serif; text-align: center; }
+  .slot b { display: block; font-size: 24px; font-weight: 900; line-height: 1; }
+  .slot small { display: block; font-size: 13px; font-weight: 700; color: var(--mute); margin-top: 4px; letter-spacing: .5px; text-transform: uppercase; }
+  .slot.now { border-color: var(--blue); }
+  .slot.now small { color: var(--blue); }
+  .slot.done { background: #0b2a17; border-color: #1c6b38; }
+  .slot.done small { color: var(--green); }
+  .slot.sel { outline: 3px solid var(--txt); outline-offset: 1px; }
+  .slot:disabled { opacity: .5; }
   code { background: #070b10; padding: 2px 6px; border-radius: 6px; font-size: 13px; word-break: break-all; }
 </style>
 </head>
@@ -62,7 +74,23 @@
 
   <div id="app" style="display:none">
     <div class="card">
-      <h2>Novo link</h2>
+      <h2>Jogos por hora</h2>
+      <p class="small" style="margin:-4px 0 12px">Cada botão gera o link de um jogo. Ele só altera o placar naquela hora (ex.: 14h às 15h).</p>
+      <div id="slots"><div class="small">Carregando…</div></div>
+    </div>
+
+    <div class="card result" id="res">
+      <h2 id="resTitle">Link pronto</h2>
+      <div class="qr" id="qr"></div>
+      <div class="link" id="link"></div>
+      <div class="btns">
+        <button class="btn" id="copy">Copiar link</button>
+        <a class="btn wa" id="wa" target="_blank" rel="noopener">Enviar no WhatsApp</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Link avulso</h2>
       <label for="nome">Nome (opcional)</label>
       <input id="nome" placeholder="Ex.: Jogo das 19h · Time do João" maxlength="40">
 
@@ -83,16 +111,6 @@
       </div>
       <div class="summary" id="sum"></div>
       <button class="go" id="go">GERAR LINK</button>
-    </div>
-
-    <div class="card result" id="res">
-      <h2 id="resTitle">Link pronto</h2>
-      <div class="qr" id="qr"></div>
-      <div class="link" id="link"></div>
-      <div class="btns">
-        <button class="btn" id="copy">Copiar link</button>
-        <a class="btn wa" id="wa" target="_blank" rel="noopener">Enviar no WhatsApp</a>
-      </div>
     </div>
 
     <div class="card">
@@ -191,6 +209,7 @@ async function load() {
   const r = await fetch(BASE + "/tokens.json?_=" + Date.now(), { cache: "no-store" });
   if (!r.ok) throw new Error(r.status);
   tokens = (await r.json()) || {};
+  renderSlots();
   const now = Date.now();
   const ids = Object.keys(tokens).sort((a, b) => (tokens[b].criado || 0) - (tokens[a].criado || 0));
   if (!ids.length) { $("list").innerHTML = '<div class="small">Nenhum link ainda.</div>'; return; }
@@ -212,6 +231,51 @@ async function load() {
     $("list").appendChild(el);
   }
 }
+
+/* ---------- jogos por hora: de agora até 24h ---------- */
+const H = 3600e3;
+const hh = ms => brt(ms).slice(0, 2) + "h";
+let selSlot = null;
+function renderSlots() {
+  const now = Date.now();
+  const first = Math.floor(now / H) * H;          // Brasília é UTC-3 inteiro: hora cheia = hora cheia UTC
+  const byWin = {};
+  for (const [id, d] of Object.entries(tokens)) {
+    const k = d.ini + "-" + d.exp;
+    if (!byWin[k] || (d.criado || 0) > (tokens[byWin[k]].criado || 0)) byWin[k] = id;
+  }
+  const box = $("slots"); box.innerHTML = "";
+  let day = null, grid = null;
+  for (let i = 0; i <= 24; i++) {
+    const ini = first + i * H, exp = ini + H;
+    if (exp <= now) continue;
+    const dLabel = brtDay(ini) === brtDay(now) ? "Hoje · " + brtDay(ini) : "Amanhã · " + brtDay(ini);
+    if (dLabel !== day) {
+      day = dLabel;
+      const h = document.createElement("div"); h.className = "day"; h.textContent = day; box.appendChild(h);
+      grid = document.createElement("div"); grid.className = "grid"; box.appendChild(grid);
+    }
+    const id = byWin[ini + "-" + exp];
+    const b = document.createElement("button");
+    b.className = "slot" + (id ? " done" : "") + (ini <= now ? " now" : "") + (selSlot === ini ? " sel" : "");
+    b.innerHTML = "<b>" + hh(ini) + "–" + hh(exp) + "</b><small>" + (id ? "✓ ver link" : ini <= now ? "agora · gerar" : "gerar link") + "</small>";
+    b.onclick = async () => {
+      selSlot = ini;
+      if (id) { show(id, tokens[id]); renderSlots(); return; }
+      b.disabled = true;
+      const nome = "Jogo " + hh(ini) + "–" + hh(exp) + " · " + brtDay(ini);
+      const t = token();
+      try {
+        const r = await fetch(BASE + "/tokens/" + t + ".json", { method: "PUT", body: JSON.stringify({ ini, exp, nome, criado: { ".sv": "timestamp" } }) });
+        if (!r.ok) throw new Error(r.status);
+        show(t, { ini, exp, nome });
+        await load();
+      } catch (e) { toast("Erro ao gerar. Verifique a internet."); b.disabled = false; }
+    };
+    grid.appendChild(b);
+  }
+}
+
 $("clean").onclick = async () => {
   const now = Date.now(), upd = {};
   for (const [id, d] of Object.entries(tokens)) if (now > d.exp) upd[id] = null;
@@ -225,7 +289,7 @@ $("clean").onclick = async () => {
   try { await load(); } catch (e) { $("denied").style.display = "block"; return; }
   $("app").style.display = "block";
   $("painelUrl").textContent = SITE + "painel.html";
-  summary(); setInterval(summary, 30000);
+  summary(); setInterval(() => { summary(); renderSlots(); }, 30000);
 })();
 </script>
 </body>
