@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05080c">
+<title>Placar Milagre · Links de acesso</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800;900&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+  :root { --bg:#05080c; --panel:#0d1218; --line:#1f2a35; --txt:#e8eef4; --mute:#8595a5;
+          --blue:#00B0F0; --green:#19E35A; --warn:#ffc23d; --bad:#ff5a5a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--txt); font-family: Barlow, system-ui, sans-serif; font-size: 16px; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 18px 16px 60px; }
+  h1 { font-family: "Barlow Condensed", sans-serif; font-weight: 900; font-size: 34px; margin: 4px 0 2px; letter-spacing: .5px; }
+  h1 span { color: var(--blue); } h1 em { color: var(--green); font-style: normal; }
+  .sub { color: var(--mute); margin: 0 0 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-family: "Barlow Condensed", sans-serif; font-size: 22px; margin: 0 0 12px; font-weight: 800; letter-spacing: .5px; }
+  label { display: block; font-weight: 700; font-size: 14px; color: var(--mute); margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
+  input { width: 100%; padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line); background: #070b10; color: var(--txt); font-size: 17px; font-family: inherit; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 11px 15px; border-radius: 12px; border: 1px solid var(--line); background: #070b10; color: var(--txt); font-weight: 700; font-size: 16px; cursor: pointer; font-family: inherit; }
+  .chip.on { background: var(--blue); border-color: var(--blue); color: #000; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row > * { flex: 1; }
+  .go { width: 100%; margin-top: 16px; padding: 16px; border-radius: 14px; border: 0; background: var(--green); color: #000; font-weight: 900; font-size: 22px; font-family: "Barlow Condensed", sans-serif; letter-spacing: 1px; cursor: pointer; }
+  .go:disabled { opacity: .5; }
+  .summary { color: var(--mute); font-size: 15px; margin-top: 10px; }
+  .summary b { color: var(--txt); }
+  .result { display: none; }
+  .result.on { display: block; }
+  .qr { background: #fff; border-radius: 14px; padding: 12px; width: 220px; margin: 0 auto 12px; }
+  .qr svg { display: block; width: 100%; height: auto; }
+  .link { word-break: break-all; font-size: 13px; color: var(--mute); background: #070b10; border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { flex: 1; min-width: 140px; padding: 13px; border-radius: 12px; border: 1px solid var(--line); background: #070b10; color: var(--txt); font-weight: 700; font-size: 16px; cursor: pointer; text-align: center; text-decoration: none; font-family: inherit; }
+  .btn.wa { background: #1faa53; border-color: #1faa53; color: #fff; }
+  .list .item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+  .list .item:first-child { border-top: 0; }
+  .list .meta { flex: 1; min-width: 0; }
+  .list .nm { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list .tm { color: var(--mute); font-size: 14px; }
+  .tag { font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: .5px; }
+  .tag.ativo { background: #0b3d1c; color: var(--green); } .tag.agendado { background: #3d300b; color: var(--warn); } .tag.expirado { background: #2a1416; color: var(--bad); }
+  .x { border: 1px solid var(--line); background: transparent; color: var(--mute); border-radius: 10px; padding: 8px 10px; cursor: pointer; font-family: inherit; font-weight: 700; }
+  .small { font-size: 14px; color: var(--mute); }
+  .err { color: var(--bad); font-weight: 700; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--txt); color: #000; padding: 10px 18px; border-radius: 99px; font-weight: 700; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.on { opacity: 1; }
+  code { background: #070b10; padding: 2px 6px; border-radius: 6px; font-size: 13px; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span>Placar</span> <em>Milagre</em> · Links</h1>
+  <p class="sub">Gere um link para os jogadores alterarem o placar só durante o horário do jogo.</p>
+
+  <div id="denied" class="card" style="display:none"><p class="err">Endereço de administração inválido.</p></div>
+
+  <div id="app" style="display:none">
+    <div class="card">
+      <h2>Novo link</h2>
+      <label for="nome">Nome (opcional)</label>
+      <input id="nome" placeholder="Ex.: Jogo das 19h · Time do João" maxlength="40">
+
+      <label>Começa</label>
+      <div class="row">
+        <div class="chips" style="flex:0 0 auto"><button class="chip on" data-ini="now">Agora</button><button class="chip" data-ini="at">Às</button></div>
+        <input id="iniTime" type="time" value="19:00" style="display:none">
+      </div>
+
+      <label>Duração</label>
+      <div class="chips" id="dur">
+        <button class="chip" data-h="1">1 h</button>
+        <button class="chip on" data-h="2">2 h</button>
+        <button class="chip" data-h="3">3 h</button>
+        <button class="chip" data-h="4">4 h</button>
+        <button class="chip" data-h="day">Até 23:59</button>
+        <button class="chip" data-h="year">Tablet (1 ano)</button>
+      </div>
+      <div class="summary" id="sum"></div>
+      <button class="go" id="go">GERAR LINK</button>
+    </div>
+
+    <div class="card result" id="res">
+      <h2 id="resTitle">Link pronto</h2>
+      <div class="qr" id="qr"></div>
+      <div class="link" id="link"></div>
+      <div class="btns">
+        <button class="btn" id="copy">Copiar link</button>
+        <a class="btn wa" id="wa" target="_blank" rel="noopener">Enviar no WhatsApp</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Links criados</h2>
+      <div class="list" id="list"><div class="small">Carregando…</div></div>
+      <div class="btns" style="margin-top:12px"><button class="btn" id="clean">Apagar expirados</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Endereço do painel (VNNOX)</h2>
+      <p class="small">Use no widget <b>Webpage</b> do Milagre-placar (256×256):</p>
+      <p><code id="painelUrl"></code></p>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DB = "https://postos-smart-default-rtdb.firebaseio.com";
+const KEY = location.hash.replace(/^#/, "").trim();
+const BASE = DB + "/placares/milagre/adm_" + KEY;
+const SITE = location.origin + location.pathname.replace(/[^/]*$/, "");
+const $ = id => document.getElementById(id);
+const two = n => String(n).padStart(2, "0");
+const brt = ms => { const d = new Date(ms - 3 * 3600e3); return two(d.getUTCHours()) + ":" + two(d.getUTCMinutes()); };
+const brtDay = ms => { const d = new Date(ms - 3 * 3600e3); return two(d.getUTCDate()) + "/" + two(d.getUTCMonth() + 1); };
+// meia-noite de Brasília do dia atual (em ms UTC)
+const brtMidnight = () => { const d = new Date(Date.now() - 3 * 3600e3); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) + 3 * 3600e3; };
+
+function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 1800); }
+function token() {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const r = crypto.getRandomValues(new Uint32Array(24)); let s = "";
+  for (const n of r) s += abc[n % abc.length];
+  return s;
+}
+
+let iniMode = "now", dur = "2";
+function window_() {
+  let ini = Date.now();
+  if (iniMode === "at") {
+    const [h, m] = ($("iniTime").value || "19:00").split(":").map(Number);
+    ini = brtMidnight() + (h * 60 + m) * 60000;
+    if (ini < Date.now() - 3600e3) ini += 86400e3; // horário já passou -> amanhã
+  }
+  let exp;
+  if (dur === "day") exp = Math.max(ini, Date.now()) - ((Math.max(ini, Date.now()) - brtMidnight()) % 86400e3) + 86400e3 - 60000;
+  else if (dur === "year") exp = ini + 365 * 86400e3;
+  else exp = ini + Number(dur) * 3600e3;
+  return { ini, exp };
+}
+function fmt(ms) { return brt(ms) + (brtDay(ms) !== brtDay(Date.now()) ? " de " + brtDay(ms) : ""); }
+function summary() {
+  const { ini, exp } = window_();
+  $("sum").innerHTML = "Pode alterar o placar de <b>" + (iniMode === "now" ? "agora" : fmt(ini)) + "</b> até <b>" + (dur === "year" ? brtDay(exp) + "/" + new Date(exp).getUTCFullYear() : fmt(exp)) + "</b>.";
+}
+document.querySelectorAll("[data-ini]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-ini]").forEach(x => x.classList.toggle("on", x === b));
+  iniMode = b.dataset.ini; $("iniTime").style.display = iniMode === "at" ? "block" : "none"; summary();
+});
+document.querySelectorAll("#dur .chip").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#dur .chip").forEach(x => x.classList.toggle("on", x === b));
+  dur = b.dataset.h; summary();
+});
+$("iniTime").oninput = summary;
+
+function linkFor(t, d) { return SITE + "?t=" + t + "&i=" + d.ini + "&e=" + d.exp; }
+
+$("go").onclick = async () => {
+  const { ini, exp } = window_();
+  const t = token(), nome = $("nome").value.trim() || "Link " + fmt(ini);
+  $("go").disabled = true;
+  try {
+    const r = await fetch(BASE + "/tokens/" + t + ".json", { method: "PUT", body: JSON.stringify({ ini, exp, nome, criado: { ".sv": "timestamp" } }) });
+    if (!r.ok) throw new Error(r.status);
+    show(t, { ini, exp, nome });
+    load();
+  } catch (e) { toast("Erro ao gerar. Verifique a internet."); }
+  $("go").disabled = false;
+};
+
+function show(t, d) {
+  const url = linkFor(t, d);
+  $("res").classList.add("on");
+  $("resTitle").textContent = d.nome;
+  $("link").textContent = url;
+  try { const qr = qrcode(0, "M"); qr.addData(url); qr.make(); $("qr").innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch (e) { $("qr").style.display = "none"; }
+  const msg = "⚽ Placar do campo (" + d.nome + ")\nVálido até " + fmt(d.exp) + ":\n" + url;
+  $("wa").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+  $("copy").onclick = async () => { try { await navigator.clipboard.writeText(url); toast("Link copiado"); } catch (e) { prompt("Copie o link:", url); } };
+  $("res").scrollIntoView({ behavior: "smooth" });
+}
+
+let tokens = {};
+async function load() {
+  const r = await fetch(BASE + "/tokens.json?_=" + Date.now(), { cache: "no-store" });
+  if (!r.ok) throw new Error(r.status);
+  tokens = (await r.json()) || {};
+  const now = Date.now();
+  const ids = Object.keys(tokens).sort((a, b) => (tokens[b].criado || 0) - (tokens[a].criado || 0));
+  if (!ids.length) { $("list").innerHTML = '<div class="small">Nenhum link ainda.</div>'; return; }
+  $("list").innerHTML = "";
+  for (const id of ids) {
+    const d = tokens[id];
+    const st = now > d.exp ? "expirado" : now < d.ini ? "agendado" : "ativo";
+    const el = document.createElement("div"); el.className = "item";
+    el.innerHTML = '<div class="meta"><div class="nm"></div><div class="tm"></div></div><span class="tag ' + st + '">' + st + '</span>' +
+      (st !== "expirado" ? '<button class="x" data-a="ver">Ver</button><button class="x" data-a="del">Revogar</button>' : '<button class="x" data-a="del">Apagar</button>');
+    el.querySelector(".nm").textContent = d.nome || id;
+    el.querySelector(".tm").textContent = fmt(d.ini) + " → " + (d.exp - d.ini > 30 * 86400e3 ? brtDay(d.exp) + "/" + new Date(d.exp).getUTCFullYear() : fmt(d.exp));
+    el.querySelectorAll("button").forEach(b => b.onclick = async () => {
+      if (b.dataset.a === "ver") return show(id, d);
+      if (st !== "expirado" && !confirm("Revogar este link? Quem tiver ele não poderá mais alterar o placar.")) return;
+      await fetch(BASE + "/tokens/" + id + ".json", { method: "DELETE" });
+      toast(st === "expirado" ? "Apagado" : "Link revogado"); load();
+    });
+    $("list").appendChild(el);
+  }
+}
+$("clean").onclick = async () => {
+  const now = Date.now(), upd = {};
+  for (const [id, d] of Object.entries(tokens)) if (now > d.exp) upd[id] = null;
+  if (!Object.keys(upd).length) return toast("Nada para apagar");
+  await fetch(BASE + "/tokens.json", { method: "PATCH", body: JSON.stringify(upd) });
+  toast("Expirados apagados"); load();
+};
+
+(async function init() {
+  if (!/^[A-Za-z0-9]{16,}$/.test(KEY)) { $("denied").style.display = "block"; return; }
+  try { await load(); } catch (e) { $("denied").style.display = "block"; return; }
+  $("app").style.display = "block";
+  $("painelUrl").textContent = SITE + "painel.html";
+  summary(); setInterval(summary, 30000);
+})();
+</script>
+</body>
+</html>

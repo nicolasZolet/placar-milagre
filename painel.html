@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=256,height=256,initial-scale=1">
+<title>Placar - painel</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+  body { width: 256px; height: 256px; position: relative;
+         font-family: "Arial Black", "Arial", "Helvetica", sans-serif; font-weight: 900;
+         -webkit-font-smoothing: none; cursor: none; }
+  .box { position: absolute; left: 0; width: 256px; height: 128px; overflow: hidden; }
+  #top { top: 0; }
+  #bot { top: 128px; }
+  .fit { position: absolute; left: 0; top: 0; white-space: nowrap; line-height: 1;
+         -webkit-transform-origin: 0 0; transform-origin: 0 0; }
+  #clock { color: #fff; }
+  .a { color: #00B0F0; }
+  .x { color: #fff; }
+  .b { color: #00FF00; }
+  #dot { position: absolute; right: 1px; bottom: 1px; width: 3px; height: 3px; background: #f00; display: none; }
+</style>
+</head>
+<body>
+<div class="box" id="top"><div class="fit" id="clock">--:--</div></div>
+<div class="box" id="bot"><div class="fit" id="score"><span class="a" id="sa">0</span><span class="x"> x </span><span class="b" id="sb">0</span></div></div>
+<div id="dot"></div>
+<script>
+(function () {
+  var DB = "https://postos-smart-default-rtdb.firebaseio.com";
+  var PATH = "/placares/milagre/placar/s.json";
+  var URL = DB + PATH;
+  var showStatus = location.search.indexOf("status") >= 0;
+
+  var state = { a: 0, b: 0 };
+  try { var saved = JSON.parse(localStorage.getItem("placar_s")); if (saved) state = saved; } catch (e) {}
+
+  /* --- ajuste do texto ao retângulo 256x128 (escala sem distorcer) --- */
+  function fit(el, box, padX, padY) {
+    el.style.fontSize = "100px";
+    el.style.transform = el.style.webkitTransform = "none";
+    var w = el.offsetWidth, h = el.offsetHeight;
+    if (!w || !h) return;
+    var bw = box.offsetWidth - padX * 2, bh = box.offsetHeight - padY * 2;
+    var s = Math.min(bw / w, bh / h);
+    var x = (box.offsetWidth - w * s) / 2, y = (box.offsetHeight - h * s) / 2 + h * s * 0.03;
+    var t = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) scale(" + s.toFixed(4) + ")";
+    el.style.transform = el.style.webkitTransform = t;
+  }
+
+  var clockEl = document.getElementById("clock"), topEl = document.getElementById("top");
+  var scoreEl = document.getElementById("score"), botEl = document.getElementById("bot");
+  var lastClock = "", lastScore = "";
+
+  function two(n) { return n < 10 ? "0" + n : "" + n; }
+  function tickClock() {
+    // Brasília = UTC-3 fixo (sem horário de verão desde 2019)
+    var d = new Date(Date.now() - 3 * 3600 * 1000);
+    var txt = two(d.getUTCHours()) + ":" + two(d.getUTCMinutes());
+    if (txt !== lastClock) { lastClock = txt; clockEl.innerHTML = txt; fit(clockEl, topEl, 4, 6); }
+  }
+
+  function render() {
+    var a = parseInt(state.a, 10) || 0, b = parseInt(state.b, 10) || 0;
+    var key = a + "-" + b;
+    if (key === lastScore) return;
+    lastScore = key;
+    document.getElementById("sa").innerHTML = a;
+    document.getElementById("sb").innerHTML = b;
+    fit(scoreEl, botEl, 4, 6);
+  }
+
+  function apply(obj) {
+    if (!obj || typeof obj !== "object") return;
+    if (obj.a !== undefined) state.a = obj.a;
+    if (obj.b !== undefined) state.b = obj.b;
+    try { localStorage.setItem("placar_s", JSON.stringify({ a: state.a, b: state.b })); } catch (e) {}
+    render();
+  }
+
+  var dot = document.getElementById("dot");
+  function online(ok) { if (showStatus) dot.style.display = ok ? "none" : "block"; }
+
+  /* --- tempo real: stream do Firebase (EventSource) + polling de reserva --- */
+  var es = null, lastEvent = 0, pollTimer = null;
+
+  function poll() {
+    var x = new XMLHttpRequest();
+    x.open("GET", URL + "?_=" + Date.now(), true);
+    x.timeout = 8000;
+    x.onload = function () {
+      if (x.status === 200) { online(true); try { apply(JSON.parse(x.responseText)); } catch (e) {} }
+    };
+    x.onerror = x.ontimeout = function () { online(false); };
+    x.send();
+  }
+
+  function onPut(ev) {
+    lastEvent = Date.now(); online(true);
+    var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (!m) return;
+    if (m.path === "/") { if (m.data === null) apply({ a: 0, b: 0 }); else apply(m.data); }
+    else { var k = m.path.replace(/^\//, "").split("/")[0], o = {}; o[k] = m.data; apply(o); }
+  }
+
+  function connect() {
+    if (es) { try { es.close(); } catch (e) {} es = null; }
+    if (!window.EventSource) { return; }
+    try {
+      es = new EventSource(URL);
+      es.addEventListener("put", onPut);
+      es.addEventListener("patch", function (ev) {
+        lastEvent = Date.now();
+        try { apply(JSON.parse(ev.data).data); } catch (e) {}
+      });
+      es.addEventListener("keep-alive", function () { lastEvent = Date.now(); online(true); });
+      es.addEventListener("cancel", function () { setTimeout(connect, 3000); });
+      es.onerror = function () { online(false); };
+      lastEvent = Date.now();
+    } catch (e) { es = null; }
+  }
+
+  // Vigia: o Firebase manda keep-alive a cada ~30s. Sem sinal por 70s -> reconecta.
+  if (!window.EventSource) {
+    setInterval(poll, 2000);
+  } else {
+    setInterval(function () {
+      if (!es || Date.now() - lastEvent > 70000) { online(false); connect(); poll(); }
+    }, 5000);
+  }
+
+  render();
+  tickClock();
+  setInterval(tickClock, 1000);
+  connect();
+  poll();
+  // reconexão preventiva a cada 30 min (players que ficam semanas ligados)
+  setInterval(connect, 30 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
