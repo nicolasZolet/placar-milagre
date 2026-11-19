@@ -55,6 +55,10 @@
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--txt); color: #000; padding: 12px 20px;
     border-radius: 99px; font-weight: 700; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .toast.on { opacity: 1; }
+  .reset { margin-top: 34px; padding-top: 22px; border-top: 1px solid var(--line); }
+  #zerar { width: 100%; padding: 16px; border-radius: 16px; border: 2px solid var(--line); background: transparent; color: var(--txt); cursor: pointer;
+    font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 22px; letter-spacing: .5px; }
+  #zerar.armed { background: var(--bad); border-color: var(--bad); color: #000; }
   .denied { text-align: center; color: var(--bad); font-weight: 700; font-size: 18px; margin-top: 40px; }
 </style>
 </head>
@@ -92,6 +96,11 @@
 
     <div class="sum" id="sum"></div>
     <button class="go" id="go">GERAR LINK</button>
+
+    <div class="reset">
+      <p class="q">Painel</p>
+      <button id="zerar">Zerar placar</button>
+    </div>
   </div>
 
   <div id="done">
@@ -200,6 +209,35 @@ $("go").onclick = async () => {
 $("again").onclick = () => {
   $("done").classList.remove("on"); $("form").classList.remove("off");
   $("ini").value = nextSlot(); resumo(); scrollTo(0, 0);
+};
+
+
+/* ---------- zerar placar (cria um acesso de 1 uso, grava 0x0 e apaga o acesso) ---------- */
+let armT = null;
+$("zerar").onclick = async () => {
+  const b = $("zerar");
+  if (!b.classList.contains("armed")) {
+    b.classList.add("armed"); b.textContent = "Toque de novo para zerar";
+    clearTimeout(armT); armT = setTimeout(() => { b.classList.remove("armed"); b.textContent = "Zerar placar"; }, 3500);
+    return;
+  }
+  clearTimeout(armT); b.classList.remove("armed"); b.textContent = "Zerando…"; b.disabled = true;
+  const t = token(), now = Date.now();
+  try {
+    const r0 = await fetch(BASE + t + ".json", { method: "PUT", body: JSON.stringify({ ini: now - 600e3, exp: now + 600e3, nome: "zerar" }) });
+    if (!r0.ok) throw 0;
+    let ok = false;
+    for (let i = 0; i < 3 && !ok; i++) {
+      const s = await (await fetch(DB + "/placares/milagre/placar/s.json?_=" + Date.now(), { cache: "no-store" })).json();
+      const v = (s && s.v) || 0;
+      const r = await fetch(DB + "/placares/milagre/placar.json", { method: "PUT",
+        body: JSON.stringify({ s: { a: 0, b: 0, v: v + 1, ts: { ".sv": "timestamp" } }, t }) });
+      ok = r.ok;
+    }
+    fetch(BASE + t + ".json", { method: "DELETE" });
+    toast(ok ? "Placar zerado ✓" : "Não foi possível zerar. Tente de novo.");
+  } catch (e) { toast("Sem internet. Tente de novo."); }
+  b.disabled = false; b.textContent = "Zerar placar";
 };
 
 /* ---------- início ---------- */
