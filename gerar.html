@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05080c">
+<title>Placar · Gerar link</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#05080c; --panel:#0d1218; --line:#202b37; --txt:#eef3f7; --mute:#8b9aa9;
+          --blue:#00B0F0; --green:#19E35A; --bad:#ff5a5a; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--txt); font-family: Barlow, system-ui, sans-serif; }
+  .wrap { max-width: 460px; margin: 0 auto; padding: max(18px, env(safe-area-inset-top)) 18px 40px; }
+  h1 { font-family: "Barlow Condensed", sans-serif; font-weight: 900; font-size: 34px; margin: 6px 0 22px; text-align: center; letter-spacing: .5px; }
+  h1 span { color: var(--blue); } h1 em { color: var(--green); font-style: normal; }
+  .q { font-weight: 700; font-size: 15px; color: var(--mute); text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 10px; }
+  .block { margin-bottom: 24px; }
+  .seg { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 8px; }
+  .seg button { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 22px; padding: 14px 6px;
+    border-radius: 14px; border: 2px solid var(--line); background: var(--panel); color: var(--txt); cursor: pointer; }
+  .seg button small { display: block; font-family: Barlow, sans-serif; font-size: 13px; font-weight: 600; color: var(--mute); margin-top: 2px; }
+  .seg button.on { background: var(--blue); border-color: var(--blue); color: #000; }
+  .seg button.on small { color: #003246; }
+  .time { display: flex; gap: 8px; }
+  .time input { flex: 1; min-width: 0; font-family: "Barlow Condensed", sans-serif; font-weight: 900; font-size: 40px; text-align: center;
+    padding: 8px 6px; border-radius: 16px; border: 2px solid var(--line); background: var(--panel); color: var(--txt); color-scheme: dark; }
+  .time input:focus { outline: none; border-color: var(--blue); }
+  .time button { flex: 0 0 auto; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 20px; padding: 0 18px;
+    border-radius: 16px; border: 2px solid var(--line); background: var(--panel); color: var(--txt); cursor: pointer; }
+  .sum { text-align: center; font-size: 19px; font-weight: 600; color: var(--mute); margin: 4px 0 16px; min-height: 24px; }
+  .sum b { color: var(--txt); }
+  .sum.err b, .sum.err { color: var(--bad); }
+  .go { width: 100%; padding: 20px; border: 0; border-radius: 18px; background: var(--green); color: #000; cursor: pointer;
+    font-family: "Barlow Condensed", sans-serif; font-weight: 900; font-size: 28px; letter-spacing: 1px; }
+  .go:disabled { opacity: .45; }
+  button:active { transform: scale(.98); }
+
+  #done { display: none; }
+  #done.on { display: block; }
+  #form.off { display: none !important; }
+  .ok { text-align: center; margin: 4px 0 18px; }
+  .ok .tick { width: 64px; height: 64px; border-radius: 50%; background: var(--green); color: #000; font-size: 38px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+  .ok h2 { font-family: "Barlow Condensed", sans-serif; font-weight: 900; font-size: 30px; margin: 0; }
+  .ok p { margin: 4px 0 0; color: var(--mute); font-size: 18px; font-weight: 600; }
+  .msg { white-space: pre-wrap; word-break: break-all; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; font-size: 15px; line-height: 1.4; margin-bottom: 14px; color: var(--txt); }
+  .big { display: block; width: 100%; padding: 18px; border-radius: 16px; border: 0; cursor: pointer; text-align: center; text-decoration: none;
+    font-family: "Barlow Condensed", sans-serif; font-weight: 900; font-size: 24px; letter-spacing: .5px; margin-bottom: 10px; }
+  .wa { background: #1faa53; color: #fff; }
+  .cp { background: var(--blue); color: #000; }
+  .again { background: transparent; color: var(--txt); border: 2px solid var(--line); }
+  .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--txt); color: #000; padding: 12px 20px;
+    border-radius: 99px; font-weight: 700; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.on { opacity: 1; }
+  .denied { text-align: center; color: var(--bad); font-weight: 700; font-size: 18px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span>Placar</span> <em>Milagre</em></h1>
+
+  <div id="denied" class="denied" style="display:none">Endereço inválido. Peça o link correto ao responsável.</div>
+
+  <div id="form" style="display:none">
+    <div class="block">
+      <p class="q">Dia do jogo</p>
+      <div class="seg" style="--n:2" id="day">
+        <button class="on" data-d="0">Hoje<small id="d0"></small></button>
+        <button data-d="1">Amanhã<small id="d1"></small></button>
+      </div>
+    </div>
+
+    <div class="block">
+      <p class="q">Começa às</p>
+      <div class="time">
+        <input id="ini" type="time" step="300" lang="pt-BR">
+        <button id="now">Agora</button>
+      </div>
+    </div>
+
+    <div class="block">
+      <p class="q">Duração</p>
+      <div class="seg" style="--n:3" id="dur">
+        <button class="on" data-m="60">1h</button>
+        <button data-m="90">1h30</button>
+        <button data-m="120">2h</button>
+      </div>
+    </div>
+
+    <div class="sum" id="sum"></div>
+    <button class="go" id="go">GERAR LINK</button>
+  </div>
+
+  <div id="done">
+    <div class="ok">
+      <div class="tick">✓</div>
+      <h2>Link pronto!</h2>
+      <p id="okWhen"></p>
+    </div>
+    <div class="msg" id="msg"></div>
+    <a class="big wa" id="wa" target="_blank" rel="noopener">Enviar no WhatsApp</a>
+    <button class="big cp" id="copy">Copiar mensagem</button>
+    <button class="big again" id="again">Gerar outro link</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DB = "https://postos-smart-default-rtdb.firebaseio.com";
+const KEY = location.hash.replace(/^#/, "").trim();
+const BASE = DB + "/placares/milagre/adm_" + KEY + "/tokens/";
+const SITE = location.origin + location.pathname.replace(/[^/]*$/, "");
+const $ = id => document.getElementById(id);
+const two = n => String(n).padStart(2, "0");
+const OFF = 3 * 3600e3, DAY = 86400e3;               // Brasília = UTC-3 (sem horário de verão)
+const local = ms => new Date(ms - OFF);
+const ddmm = ms => { const d = local(ms); return two(d.getUTCDate()) + "/" + two(d.getUTCMonth() + 1); };
+const hora = ms => { const d = local(ms); return d.getUTCHours() + "h" + (d.getUTCMinutes() ? two(d.getUTCMinutes()) : ""); };
+const midnight = ms => { const d = local(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) + OFF; };
+
+let dayOff = 0, durMin = 60;
+
+function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 1800); }
+function token() {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const r = crypto.getRandomValues(new Uint32Array(24)); let s = "";
+  for (const n of r) s += abc[n % abc.length];
+  return s;
+}
+function nowHHMM() { const d = local(Date.now()); return two(d.getUTCHours()) + ":" + two(d.getUTCMinutes()); }
+function nextSlot() { // próximo horário "redondo" (de 5 em 5 min)
+  const d = local(Date.now() + 5 * 60e3); const m = Math.ceil(d.getUTCMinutes() / 5) * 5;
+  const h = (d.getUTCHours() + (m === 60 ? 1 : 0)) % 24;
+  return two(h) + ":" + two(m % 60);
+}
+function janela() {
+  const v = $("ini").value; if (!v) return null;
+  const [h, m] = v.split(":").map(Number);
+  const ini = midnight(Date.now()) + dayOff * DAY + (h * 60 + m) * 60e3;
+  return { ini, exp: ini + durMin * 60e3 };
+}
+function quando(ms) {
+  const d = ddmm(ms);
+  return d === ddmm(Date.now()) ? "Hoje" : d === ddmm(Date.now() + DAY) ? "Amanhã (" + d + ")" : "Dia " + d;
+}
+function resumo() {
+  const w = janela(), s = $("sum"), go = $("go");
+  if (!w) { s.className = "sum"; s.innerHTML = "Escolha o horário"; go.disabled = true; return; }
+  if (w.exp <= Date.now()) { s.className = "sum err"; s.innerHTML = "<b>Esse horário já passou</b>"; go.disabled = true; return; }
+  s.className = "sum"; go.disabled = false;
+  s.innerHTML = quando(w.ini) + ", das <b>" + hora(w.ini) + "</b> às <b>" + hora(w.exp) + "</b>";
+}
+function mensagem(url, w) {
+  return "⚽ *Placar do seu jogo*\n" + quando(w.ini) + ", das " + hora(w.ini) + " às " + hora(w.exp) + ":\n" + url + "\nBom jogo! 🏆";
+}
+async function copiar(txt) {
+  try { await navigator.clipboard.writeText(txt); }
+  catch (e) { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+  toast("Mensagem copiada");
+}
+
+/* ---------- interações ---------- */
+document.querySelectorAll("#day button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#day button").forEach(x => x.classList.toggle("on", x === b));
+  dayOff = Number(b.dataset.d); resumo();
+});
+document.querySelectorAll("#dur button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#dur button").forEach(x => x.classList.toggle("on", x === b));
+  durMin = Number(b.dataset.m); resumo();
+});
+$("now").onclick = () => {
+  $("ini").value = nowHHMM();
+  dayOff = 0; document.querySelectorAll("#day button").forEach(x => x.classList.toggle("on", x.dataset.d === "0"));
+  resumo();
+};
+$("ini").oninput = resumo;
+
+$("go").onclick = async () => {
+  const w = janela(); if (!w || w.exp <= Date.now()) return resumo();
+  const go = $("go"); go.disabled = true; go.textContent = "GERANDO…";
+  const t = token();
+  const nome = "Jogo " + hora(w.ini) + "–" + hora(w.exp) + " · " + ddmm(w.ini);
+  try {
+    const r = await fetch(BASE + t + ".json", { method: "PUT", body: JSON.stringify({ ini: w.ini, exp: w.exp, nome, criado: { ".sv": "timestamp" } }) });
+    if (!r.ok) throw new Error(r.status);
+    const url = SITE + "?t=" + t + "&i=" + w.ini + "&e=" + w.exp;
+    const msg = mensagem(url, w);
+    $("okWhen").textContent = quando(w.ini) + ", das " + hora(w.ini) + " às " + hora(w.exp);
+    $("msg").textContent = msg.replace(/\*/g, "");
+    $("wa").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+    $("copy").onclick = () => copiar(msg);
+    $("form").classList.add("off"); $("done").classList.add("on");
+    scrollTo(0, 0);
+  } catch (e) { toast("Sem internet. Tente de novo."); }
+  go.disabled = false; go.textContent = "GERAR LINK";
+};
+$("again").onclick = () => {
+  $("done").classList.remove("on"); $("form").classList.remove("off");
+  $("ini").value = nextSlot(); resumo(); scrollTo(0, 0);
+};
+
+/* ---------- início ---------- */
+(async function init() {
+  if (!/^[A-Za-z0-9]{16,}$/.test(KEY)) { $("denied").style.display = "block"; return; }
+  try {
+    const r = await fetch(BASE.replace(/\/$/, "") + ".json?shallow=true&_=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw 0;
+  } catch (e) { $("denied").style.display = "block"; return; }
+  $("d0").textContent = ddmm(Date.now()); $("d1").textContent = ddmm(Date.now() + DAY);
+  $("ini").value = nextSlot();
+  $("form").style.display = "block";
+  resumo();
+  setInterval(resumo, 30000);
+})();
+</script>
+</body>
+</html>
